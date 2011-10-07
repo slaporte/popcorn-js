@@ -452,10 +452,15 @@ test("roundTime", function() {
 
   var popped = Popcorn("#video");
 
-  popped.play().pause().currentTime( 0.98 );
+  stop();
+  popped.listen( "canplayall", function() {
 
-  equals( 1, popped.roundTime(), ".roundTime() returns 1 when currentTime is 0.98s" );
+    popped.play().pause().currentTime( 0.98 );
 
+    equals( 1, popped.roundTime(), ".roundTime() returns 1 when currentTime is 0.98s" );
+    Popcorn.destroy( popped );
+    start();
+  });
 
 });
 
@@ -479,6 +484,7 @@ test("exec", function() {
 
         equals( loop, expects, "exec callback repeat check, only called twice" );
         Popcorn.removePlugin( popped, "exec" );
+        Popcorn.destroy( popped );
         start();
 
       }, 1000 );
@@ -488,7 +494,7 @@ test("exec", function() {
   stop( 10000 );
 
   popped.exec( 4, function() {
-    ok( loop < 2, "exec callback fired " + ++loop );
+    ok( loop < 2, "exec callback fired " + ( ++loop ) );
     plus();
 
     if ( !hasLooped ) {
@@ -497,7 +503,10 @@ test("exec", function() {
 
       hasLooped = true;
     }
-  }).currentTime(3).play();
+  });
+
+
+  popped.play( 3 );
 
 });
 
@@ -564,40 +573,32 @@ test( "play(n)/pause(n) as shorthand to currentTime(n).play()/pause()", function
 
   var $pop = Popcorn( "#video" ),
     expects = 2,
-    count = 0,
-    fired = 0;
+    count = 0;
 
   expect( expects );
 
   function plus() {
-    if ( ++count == expects ) {
+    if ( ++count === expects ) {
+      Popcorn.destroy( $pop );
       start();
     }
   }
 
-  stop( 1000 );
+  stop( );
 
-  function poll() {
+  $pop.listen( "canplayall", function() {
 
-    if ( $pop.media.readyState >= 2 ) {
-      // this should trigger immediately
-
-      $pop.play( 10 ).pause();
-
+    // This is done this ugly way because IE9 can't perform a seek until a previous seek's "seeked" event fires.
+    $pop.listen("seeked", function() {
       equal( Math.round($pop.currentTime()), 10, "play(n) sets currentTime to 10" );
       plus();
 
-      $pop.pause( 5 );
-
-      equal( Math.round($pop.currentTime()), 5, "pause(n) sets currentTime to 5" );
+      $pop.pause( 20 );
+      equal( Math.round($pop.currentTime()), 20, "pause(n) sets currentTime to 20" );
       plus();
-
-    } else {
-      setTimeout( poll, 10 );
-    }
-  }
-
-  poll();
+    });
+    $pop.play( 10 ).pause();
+  });
 });
 
 // Originally written for #705 by chris de cairos
@@ -636,7 +637,7 @@ test( "play(n)/pause(n) custom stop()", function() {
   $pop.listen( "canplayall", function() {
 
     this.exec( 4, function() {
-    
+
       this.exec( 0, function() {
 
         equal( this.currentTime(), 0, "currentTime is 0" );
@@ -842,9 +843,9 @@ test( "Popcorn.locale object", function() {
     get: "function",
     set: "function",
     broadcast: "function"
-  },
-  locale = navigator.language,
-  parts = locale.split("-"),
+  };
+  var locale = window.navigator.userLanguage || window.navigator.language;
+  var parts = locale.split("-");
 
   stub = {
     iso6391: locale,
@@ -935,10 +936,6 @@ test("position", function() {
       tests;
 
   $("#position-tests").show();
-//  console.log( $absolute );
-//  console.log( $fixed );
-//  console.log( $relative );
-//  console.log( $static );
 
   tests = [
     { id: "absolute-1",     top:  0, left:  0 },
@@ -2305,7 +2302,6 @@ test( "Popcorn Compose", function() {
   // runs once, 2 tests
   Popcorn.plugin( "pluginOptions1", {
     _setup: function( options ) {
-      console.log( "runs once?" );
       ok( options.pluginoption, "plugin option one exists at setup" );
       plus();
       ok( !options.composeoption, "compose option one does not exist at setup" );
@@ -2672,16 +2668,14 @@ test("Remove Plugin", function() {
 
 test( "Protected Names", function() {
 
-  var keys = [], 
+  var keys = [],
       len,
       count = 0,
       popped = Popcorn( "#video" );
 
-  for ( item in Popcorn.p ) {
-    if ( Popcorn.p.hasOwnProperty( item ) ) {
-      keys.push( item );
+    for ( var key in Popcorn.p ) {
+      Popcorn.p.hasOwnProperty( key ) && keys.push( keys );
     }
-  }
 
   len = keys.length;
 
@@ -3476,18 +3470,17 @@ test("Popcorn.getScript()", function() {
 
   Popcorn.getScript(
 
-    "https://github.com/rwldrn/has.js/raw/master/has.js",
+    "http://cadecairos.github.com/popcorn-js/testfunction.js",
 
     function() {
 
       ok( true, "getScript C returned");
       plus();
 
-
-      ok( ("has" in window) , "Popcorn.getScript https://github.com/rwldrn/has.js/raw/master/has.js loaded: `has` is available");
+      ok( ("testFunction2" in window) , "Popcorn.getScript http://cadecairos.github.com/popcorn-js/testfunction.js loaded: `testFunction2` is available");
       plus();
 
-      delete window["has"];
+      delete window["testFunction2"];
     }
   );
 
@@ -3531,10 +3524,10 @@ test("XML Response", function() {
       plus();
 
       var parser = new DOMParser(),
-      xml = parser.parseFromString('<?xml version="1.0" encoding="UTF-8"?><dashboard><locations class="foo"><location for="bar"><infowindowtab> <tab title="Location"><![CDATA[blabla]]></tab> <tab title="Users"><![CDATA[blublu]]></tab> </infowindowtab> </location> </locations> </dashboard>',"text/xml");
+      xml = parser.parseFromString('<?xml version="1.0" encoding="UTF-8"?><dashboard><locations class="foo"><location for="bar"><infowindowtab> <tab title="Location"><![CDATA[blabla]]></tab> <tab title="Users"><![CDATA[blublu]]></tab> </infowindowtab> </location> </locations> </dashboard>',"text/xml"),
+      xml2 = parser.parseFromString( data.text, "text/xml" );
 
-
-      equals( data.xml.toString(), xml.toString(), "data.xml returns a document of xml");
+      equals( xml2.toString(), xml.toString(), "data.xml returns a document of xml");
       plus();
 
     }
@@ -3569,10 +3562,14 @@ test("dataType: XML Response", function() {
       var parser = new DOMParser(),
       xml = parser.parseFromString('<?xml version="1.0" encoding="UTF-8"?><dashboard><locations class="foo"><location for="bar"><infowindowtab> <tab title="Location"><![CDATA[blabla]]></tab> <tab title="Users"><![CDATA[blublu]]></tab> </infowindowtab> </location> </locations> </dashboard>',"text/xml");
 
-
-      equals( data.toString(), xml.toString(), "dataType: 'xml', data.xml returns a document of xml");
-      plus();
-
+      if ( data.toString ) {
+        equals( data.toString(), xml.toString(), "data.xml returns a document of xml");
+        plus();
+      } else {
+        var xml2 = parser.parseFromString( data.xml, "text/xml" );
+        equals( xml2.toString(), xml.toString(), "data.xml returns a document of xml");
+        plus();
+      }
     }
   });
 
