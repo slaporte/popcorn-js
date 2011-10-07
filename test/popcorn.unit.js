@@ -844,8 +844,8 @@ test( "Popcorn.locale object", function() {
     set: "function",
     broadcast: "function"
   };
-  var locale = window.navigator.userLanguage || window.navigator.language;
-  var parts = locale.split("-");
+  var locale = window.navigator.userLanguage || window.navigator.language,
+  parts = locale.split("-"),
 
   stub = {
     iso6391: locale,
