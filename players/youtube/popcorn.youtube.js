@@ -64,6 +64,9 @@ Popcorn.player( "youtube", {
             currentTime = youtubeObject.getCurrentTime();
             media.dispatchEvent( "timeupdate" );
             !media.paused && media.pause();
+          } else if ( state === 0 ) {
+            
+            media.dispatchEvent( "ended" );
           }
         };
 

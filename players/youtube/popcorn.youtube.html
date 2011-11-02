@@ -94,6 +94,9 @@
           .listen( 'timeupdate', function() {
             element( 'player-time' ).innerHTML = popcorn.currentTime();
           })
+          .listen( 'ended', function() {
+            element( 'player-ended' ).innerHTML = "True";
+          })
           // Update button labels
           .listen( 'play' , function() {
             paused = false;
@@ -152,6 +155,7 @@
             <li>Current Time (s): <span id="player-time"></span></li>
             <li>Volume (0-1): <span id="player_vol"></span></li>
             <li>Video Duration (s): <span id="player-duration"></span></li>
+            <li>Ended event: <span id="player-ended"></span></li>
           </ul>
         </div>
       </div>
